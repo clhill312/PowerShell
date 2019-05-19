@@ -1,4 +1,4 @@
-function Play-RandomMovie {   
+function Get-RandomMovie {   
     [CmdletBinding()]
 
     $ExcludedFiletypes = @(
