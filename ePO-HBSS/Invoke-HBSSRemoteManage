@@ -1,0 +1,61 @@
+function Invoke-HBSSRemoteManage {
+
+    Param(
+        [CmdletBinding()]
+    
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $ComputerName,
+
+        [Parameter()]
+        [switch] $UpdateDAT,
+
+        [Parameter()]
+        [switch] $CollectSendProps,
+
+        [Parameter()]
+        [switch] $AddSN
+
+    )
+
+
+    foreach ($computer in $ComputerName) {
+
+        
+            # Check if PSRemoting is enabled
+            if ([bool](Test-WSMan -ComputerName $ComputerName)) {
+                Write-Verbose "PSRemoting is enabled."
+            }
+            else {
+                Write-Error "PSRemoting is NOT enabled!"
+            }
+
+        
+
+        if ($UpdateDAT) {
+            Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+                Write-Output "Updating DAT..."
+                Start-Process 'C:\Program Files (x86)\McAfee\VirusScan Enterprise\mcupdate.exe' -ArgumentList "/update", "/quiet" -Wait
+            }
+        }
+
+  
+
+        # collect and send props
+        if ($CollectSendProps) {
+            Write-Output "Collecting & Sending Props..."
+            psexec -s \\$ComputerName "C:\Program Files\McAfee\Agent\cmdagent.exe" /p
+        }
+
+        # add serial number to custom prop 8
+        if ($AddSN) {
+            $SN = (Get-WmiObject -ComputerName $ComputerName win32_bios).SerialNumber
+            #psexec -s \\$ComputerName powershell {& "C:\Program Files\McAfee\Agent\maconfig.exe" -custom -prop8 "$SN"}
+            psexec -s \\$computername powershell "& 'C:\Program Files\McAfee\Agent\maconfig.exe' -custom -prop8 $SN"
+        }
+
+    }
+
+
+
+}
