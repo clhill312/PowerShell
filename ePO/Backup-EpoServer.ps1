@@ -12,13 +12,17 @@ function Backup-EpoServer {
     #>
     
     [CmdletBinding()]
-    PARAM ()
+    PARAM (
+        [Parameter(Mandatory)]
+        [string]$LocalBackupLocation = "C:\Backups",
+        
+        [Parameter(Mandatory)]
+        [string]$NetworkBackupLocation = "\\server\share\folder"
+    )
 
 
     BEGIN {
-        $date = Get-Date -Format yyyy-MM-dd_HHmmss
-        $LocalBackupLocation = C:\Backups
-        $NetworkBackupLocation = "\\server\share\folder"
+        $date = Get-Date -Format yyyy-MM-dd_HHmmss      
     }
 
     PROCESS {
@@ -46,7 +50,7 @@ function Backup-EpoServer {
             "C:\Program Files (x86)\McAfee\ePolicy Orchestrator\Apache2\conf"
         )
 
-        Compress-Archive -Path $ePOfolders -CompressionLevel Optimal -DestinationPath "$BackupLocation\$($date)-ePOFoldersBackup.zip"
+        Compress-Archive -Path $ePOfolders -CompressionLevel Optimal -DestinationPath "$LocalBackupLocation\$date\$date-ePOFoldersBackup.zip"
 
 
         # backup sql database
@@ -54,7 +58,7 @@ function Backup-EpoServer {
         $pw = Get-Content C:\cred.txt | ConvertTo-SecureString 
 
         $creds = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user,$pw
-        Backup-SqlDatabase -ServerInstance SERVER\INSTANCE -Database db_name -Credential $creds -BackupFile "$LocalBackupLocation\$date\epodb.bak"
+        Backup-SqlDatabase -ServerInstance SERVER\INSTANCE -Database db_name -Credential $creds -BackupFile "$LocalBackupLocation\$date\$date-epodb.bak"
     }
 
     END {
