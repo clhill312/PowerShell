@@ -1,29 +1,37 @@
 function Get-BitLockerRecoveryPassword {
-    
-    
-   [CmdletBinding()]
-   Param(
-       [Parameter(Mandatory=$True)]
-       [ValidateNotNullOrEmpty()]
-       [string] $ComputerName,
+    <#
+    .SYNOPSIS
+        Gets the 48-digit Bitlocker recovery password from one or more computers
 
-       [Parameter(Mandatory=$true)]
-       [ValidateNotNullOrEmpty]
-       [string] $ComputersOU
-    )
- 
-    
-    $Computer = Get-ADComputer -Identity $ComputerName
+    .EXAMPLE
+        Get-BitLockerRecoveryPassword -ComputerName Win101
 
-    Get-ADObject -Filter { (objectclass -eq "msFVE-RecoveryInformation")} -Properties "msFVE-RecoveryPassword" -SearchBase $ComputersOU |
-        Where-Object {$_.DistinguishedName -like "*$($Computer.Name)*"} |
+        Get-BitLockerRecoveryPassword -ComputerName 'Win101','Win102','Win103'
+
+    #>
+    
+    [CmdletBinding()]
+    Param(
+
+        # can accept one computername or a list of computernames
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string[]]
+        $ComputerName
+     )
+  
+    foreach ($Computer in $ComputerName) {
+        $ComputerDN = (Get-ADComputer -Identity $Computer).DistinguishedName
+        Get-ADObject -Filter {ObjectClass -eq 'msFVE-RecoveryInformation'} -Properties 'msFVE-RecoveryPassword' -SearchBase $ComputerDN |
             ForEach-Object {
-                New-Object psobject -Property @{
-                ComputerName = (($_.DistinguishedName -split ',')[1] -join ',') -replace "(CN=)"
-                RecoveryKey = $_.'msFVE-RecoveryPassword'
-                DateTime = $($_.Name).Remove(19)
-                PasswordID = ($_.Name -split '{')[1] -replace '}'
+                [PSCustomObject]@{
+                    ComputerName = (($_.DistinguishedName -split ',')[1] -join ',') -replace '(CN=)'
+                    RecoveryPassword = $_.'msFVE-RecoveryPassword'
+                    DateTime = $($_.Name).Remove(19)
+                    PasswordID = ($_.Name -split '{')[1] -replace '}'
                 }
-            } | Select-Object ComputerName,DateTime,PasswordID,RecoveryKey | Sort-Object DateTime -Descending
-     
-}
+            }
+
+    }
+      
+ }
