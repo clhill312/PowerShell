@@ -13,25 +13,28 @@ function Get-BitLockerRecoveryPassword {
     [CmdletBinding()]
     Param(
 
-        # can accept one computername or a list of computernames
-        [Parameter()]
-        [ValidateNotNullOrEmpty()]
+        # can accept one computername or a list of computernames or output from Get-ADComputer
+        [Parameter(ValueFromPipeline)]
+        [Alias('Name')]
+        [ValidateNotNullOrEmpty()]      
         [string[]]
         $ComputerName
      )
   
-    foreach ($Computer in $ComputerName) {
-        $ComputerDN = (Get-ADComputer -Identity $Computer).DistinguishedName
-        Get-ADObject -Filter {ObjectClass -eq 'msFVE-RecoveryInformation'} -Properties 'msFVE-RecoveryPassword' -SearchBase $ComputerDN |
-            ForEach-Object {
-                [PSCustomObject]@{
-                    ComputerName = (($_.DistinguishedName -split ',')[1] -join ',') -replace '(CN=)'
-                    RecoveryPassword = $_.'msFVE-RecoveryPassword'
-                    DateTime = $($_.Name).Remove(19)
-                    PasswordID = ($_.Name -split '{')[1] -replace '}'
+    process{
+        foreach ($Computer in $ComputerName) {
+            $ComputerDN = (Get-ADComputer -Identity $Computer).DistinguishedName
+            Get-ADObject -Filter {ObjectClass -eq 'msFVE-RecoveryInformation'} -Properties 'msFVE-RecoveryPassword' -SearchBase $ComputerDN |
+                ForEach-Object {
+                    [PSCustomObject]@{
+                        ComputerName = (($_.DistinguishedName -split ',')[1] -join ',') -replace '(CN=)'
+                        RecoveryPassword = $_.'msFVE-RecoveryPassword'
+                        DateTime = $($_.Name).Remove(19)
+                        PasswordID = ($_.Name -split '{')[1] -replace '}'
+                    }
                 }
-            }
 
+        }
     }
       
  }
